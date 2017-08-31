@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-ext
+  labels:
+    app: clickhouse
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8123
+    name: server
+  - port: 9000
+    name: client
+  selector:
+    app: clickhouse
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8123
+    name: server
+  clusterIP: None
+  selector:
+    app: clickhouse
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: clickhouse
+spec:
+  serviceName: clickhouse
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+    spec:
+      containers:
+      - name: k8sch
+        imagePullPolicy: Always
+        image: count0ru/clickhouse-k8s
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: KUBERNETES_DOMAIN
+          value: "k8s.local"
+        - name: CLUSTER_NAME
+          value: "k8scluster"
+        ports:
+        - containerPort: 8123
+          name: server
+
